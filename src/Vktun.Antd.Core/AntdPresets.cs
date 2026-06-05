@@ -10,19 +10,19 @@ public static class AntdPresets
     /// </summary>
     public static class Colors
     {
-        public static AntdColor AntdBlue => AntdColor.Parse("#1677FF");
-        public static AntdColor AliyunOrange => AntdColor.Parse("#FF6A00");
-        public static AntdColor WeChatGreen => AntdColor.Parse("#07C160");
-        public static AntdColor GeekBlue => AntdColor.Parse("#2F54EB");
-        public static AntdColor Golden => AntdColor.Parse("#D48806");
-        public static AntdColor Magenta => AntdColor.Parse("#EB2F96");
-        public static AntdColor Purple => AntdColor.Parse("#722ED1");
-        public static AntdColor Volcano => AntdColor.Parse("#FA541C");
-        public static AntdColor Cyan => AntdColor.Parse("#13C2C2");
-        public static AntdColor Lime => AntdColor.Parse("#A0D911");
-        public static AntdColor Success => AntdColor.Parse("#52C41A");
-        public static AntdColor Warning => AntdColor.Parse("#FAAD14");
-        public static AntdColor Error => AntdColor.Parse("#FF4D4F");
+        public static AntdColor AntdBlue { get; } = AntdColor.Parse("#1677FF");
+        public static AntdColor AliyunOrange { get; } = AntdColor.Parse("#FF6A00");
+        public static AntdColor WeChatGreen { get; } = AntdColor.Parse("#07C160");
+        public static AntdColor GeekBlue { get; } = AntdColor.Parse("#2F54EB");
+        public static AntdColor Golden { get; } = AntdColor.Parse("#D48806");
+        public static AntdColor Magenta { get; } = AntdColor.Parse("#EB2F96");
+        public static AntdColor Purple { get; } = AntdColor.Parse("#722ED1");
+        public static AntdColor Volcano { get; } = AntdColor.Parse("#FA541C");
+        public static AntdColor Cyan { get; } = AntdColor.Parse("#13C2C2");
+        public static AntdColor Lime { get; } = AntdColor.Parse("#A0D911");
+        public static AntdColor Success { get; } = AntdColor.Parse("#52C41A");
+        public static AntdColor Warning { get; } = AntdColor.Parse("#FAAD14");
+        public static AntdColor Error { get; } = AntdColor.Parse("#FF4D4F");
     }
 
     /// <summary>

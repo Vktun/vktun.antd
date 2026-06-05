@@ -2,24 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-
     <PackageId>Vktun.Antd.Avalonia</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Vktun</Authors>
-    <Company>Vktun</Company>
     <Description>Ant Design inspired Avalonia UI component library built on the shared Vktun.Antd token system.</Description>
     <PackageTags>Avalonia;UI;AntDesign;Theme;Components;DarkMode;Token</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/vktun/vktun.antd</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/vktun/vktun.antd</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>

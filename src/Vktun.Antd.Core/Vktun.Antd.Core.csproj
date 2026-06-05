@@ -2,27 +2,14 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-
     <PackageId>Vktun.Antd.Core</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Vktun</Authors>
-    <Company>Vktun</Company>
     <Description>Shared Ant Design inspired theme tokens and primitives for Vktun.Antd desktop UI libraries.</Description>
     <PackageTags>UI;AntDesign;Theme;Components;DarkMode;Token</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/vktun/vktun.antd</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/vktun/vktun.antd</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Vktun.Antd.Core.Tests" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
   </ItemGroup>
 
