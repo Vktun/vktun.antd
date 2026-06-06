@@ -11,7 +11,7 @@ public static class LayoutSnippets
 """;
 
     public static string Grid => """
-<antd:Row Gutter="16">
+<antd:Row Gutter="16" Justify="Center" Align="Center">
     <antd:Col Span="8"><Border Height="64" /></antd:Col>
     <antd:Col Span="8"><Border Height="64" /></antd:Col>
     <antd:Col Span="8"><Border Height="64" /></antd:Col>

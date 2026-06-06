@@ -19,7 +19,7 @@ public class Space : StackPanel
     /// </summary>
     public static readonly DependencyProperty GapProperty =
         DependencyProperty.Register(nameof(Gap), typeof(double), typeof(Space),
-            new PropertyMetadata(8d, OnGapChanged));
+            new PropertyMetadata(8d, OnGapChanged, CoerceNonNegative));
 
     /// <summary>
     /// Identifies the <see cref="Wrap"/> dependency property.
@@ -45,7 +45,7 @@ public class Space : StackPanel
     }
 
     /// <summary>
-    /// Gets or sets whether items should wrap when space is limited.
+    /// Gets or sets whether items should wrap when space is limited. Use <see cref="Flex" /> for wrapping layouts.
     /// </summary>
     public bool Wrap
     {
@@ -54,7 +54,7 @@ public class Space : StackPanel
     }
 
     /// <summary>
-    /// Gets or sets the alignment of items.
+    /// Gets or sets the alignment of items. Use <see cref="Flex" /> for cross-axis alignment.
     /// </summary>
     public HorizontalAlignment Align
     {
@@ -70,17 +70,17 @@ public class Space : StackPanel
         }
     }
 
+    private static object CoerceNonNegative(DependencyObject dependencyObject, object baseValue)
+    {
+        return baseValue is double value && value > 0d ? value : 0d;
+    }
+
     /// <summary>
     /// Updates the spacing for all child elements.
     /// </summary>
     public void UpdateSpacing()
     {
         var gap = Gap;
-        if (gap <= 0d)
-        {
-            return;
-        }
-
         for (var index = 0; index < Children.Count; index++)
         {
             if (Children[index] is not FrameworkElement child)
@@ -98,5 +98,15 @@ public class Space : StackPanel
     {
         base.OnVisualChildrenChanged(visualAdded, visualRemoved);
         UpdateSpacing();
+    }
+
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.Property == OrientationProperty)
+        {
+            UpdateSpacing();
+        }
     }
 }

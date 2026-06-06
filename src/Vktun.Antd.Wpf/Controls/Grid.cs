@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -28,16 +29,7 @@ public class Row : Panel
     /// </summary>
     public static readonly DependencyProperty GutterProperty =
         DependencyProperty.Register(nameof(Gutter), typeof(double), typeof(Row),
-            new PropertyMetadata(0.0, OnGutterChanged));
-
-    private static void OnGutterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is Row row)
-        {
-            row.InvalidateMeasure();
-            row.InvalidateArrange();
-        }
-    }
+            new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure, null, CoerceNonNegative));
 
     /// <summary>
     /// Gets or sets whether the row should wrap to next line.
@@ -53,16 +45,7 @@ public class Row : Panel
     /// </summary>
     public static readonly DependencyProperty WrapProperty =
         DependencyProperty.Register(nameof(Wrap), typeof(bool), typeof(Row),
-            new PropertyMetadata(true, OnWrapChanged));
-
-    private static void OnWrapChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is Row row)
-        {
-            row.InvalidateMeasure();
-            row.InvalidateArrange();
-        }
-    }
+            new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
     /// <summary>
     /// Gets or sets the horizontal alignment of columns.
@@ -78,7 +61,7 @@ public class Row : Panel
     /// </summary>
     public static readonly DependencyProperty JustifyProperty =
         DependencyProperty.Register(nameof(Justify), typeof(HorizontalAlignment), typeof(Row),
-            new PropertyMetadata(HorizontalAlignment.Left));
+            new FrameworkPropertyMetadata(HorizontalAlignment.Left, FrameworkPropertyMetadataOptions.AffectsArrange));
 
     /// <summary>
     /// Gets or sets the vertical alignment of columns.
@@ -94,111 +77,165 @@ public class Row : Panel
     /// </summary>
     public static readonly DependencyProperty AlignProperty =
         DependencyProperty.Register(nameof(Align), typeof(VerticalAlignment), typeof(Row),
-            new PropertyMetadata(VerticalAlignment.Top));
+            new FrameworkPropertyMetadata(VerticalAlignment.Top, FrameworkPropertyMetadataOptions.AffectsArrange));
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var gutter = Gutter;
-        var totalGutter = gutter * (InternalChildren.Count - 1);
-        var availableWidth = availableSize.Width - totalGutter;
-
-        double currentRowHeight = 0;
-        double currentRowWidth = 0;
-        double totalHeight = 0;
-
-        foreach (UIElement child in InternalChildren)
+        var lines = BuildLines(availableSize, measureChildren: true);
+        var desiredHeight = 0d;
+        foreach (var line in lines)
         {
-            if (child is Col col)
-            {
-                var span = GetEffectiveSpan(col, availableSize.Width);
-                var colWidth = (availableWidth * span) / 24;
-                
-                child.Measure(new Size(colWidth, availableSize.Height));
-                
-                if (Wrap && currentRowWidth + colWidth > availableWidth)
-                {
-                    totalHeight += currentRowHeight;
-                    currentRowWidth = colWidth;
-                    currentRowHeight = child.DesiredSize.Height;
-                }
-                else
-                {
-                    currentRowWidth += colWidth + gutter;
-                    currentRowHeight = Math.Max(currentRowHeight, child.DesiredSize.Height);
-                }
-            }
+            desiredHeight += line.Height;
         }
 
-        totalHeight += currentRowHeight;
-        return new Size(availableSize.Width, totalHeight);
+        return new Size(double.IsInfinity(availableSize.Width) ? GetMaxLineWidth(lines) : availableSize.Width, desiredHeight);
     }
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        var gutter = Gutter;
-        var totalGutter = gutter * (InternalChildren.Count - 1);
-        var availableWidth = finalSize.Width - totalGutter;
-
-        double currentX = 0;
-        double currentY = 0;
-        double currentRowHeight = 0;
-        double currentRowWidth = 0;
-
-        foreach (UIElement child in InternalChildren)
+        var lines = BuildLines(finalSize, measureChildren: false);
+        var y = 0d;
+        foreach (var line in lines)
         {
-            if (child is Col col)
+            var gap = Gutter;
+            var availableExtra = Math.Max(0d, finalSize.Width - line.Width);
+            var x = GetLineStart(availableExtra);
+
+            if (Justify == HorizontalAlignment.Stretch && line.Items.Count > 1)
             {
-                var span = GetEffectiveSpan(col, finalSize.Width);
-                var offset = GetEffectiveOffset(col, finalSize.Width);
-                var colWidth = (availableWidth * span) / 24;
-                var offsetX = (availableWidth * offset) / 24;
-
-                if (Wrap && currentX + colWidth + offsetX > finalSize.Width && currentX > 0)
-                {
-                    currentY += currentRowHeight;
-                    currentX = offsetX;
-                    currentRowHeight = 0;
-                }
-                else
-                {
-                    currentX += offsetX;
-                }
-
-                var rect = new Rect(currentX, currentY, colWidth, child.DesiredSize.Height);
-                child.Arrange(rect);
-
-                currentX += colWidth + gutter;
-                currentRowWidth += colWidth + gutter;
-                currentRowHeight = Math.Max(currentRowHeight, child.DesiredSize.Height);
+                gap += availableExtra / (line.Items.Count - 1);
+                x = 0d;
             }
+
+            foreach (var item in line.Items)
+            {
+                var childHeight = Align == VerticalAlignment.Stretch ? line.Height : item.Child.DesiredSize.Height;
+                var childY = y + GetChildTop(line.Height, childHeight);
+                item.Child.Arrange(new Rect(x + item.OffsetWidth, childY, item.Width, childHeight));
+                x += item.OffsetWidth + item.Width + gap;
+            }
+
+            y += line.Height;
         }
 
         return finalSize;
     }
 
+    private List<RowLine> BuildLines(Size availableSize, bool measureChildren)
+    {
+        var lines = new List<RowLine>();
+        var containerWidth = double.IsInfinity(availableSize.Width) ? 0d : Math.Max(0d, availableSize.Width);
+        var unitWidth = containerWidth / 24d;
+        var gutter = Gutter;
+        var current = new RowLine();
+
+        foreach (UIElement child in InternalChildren)
+        {
+            if (child is not Col col)
+            {
+                continue;
+            }
+
+            var width = unitWidth * GetEffectiveSpan(col, containerWidth);
+            var offsetWidth = unitWidth * GetEffectiveOffset(col, containerWidth);
+            if (measureChildren)
+            {
+                child.Measure(new Size(width, availableSize.Height));
+            }
+
+            var itemWidth = offsetWidth + width;
+            var nextWidth = current.Items.Count == 0 ? itemWidth : current.Width + gutter + itemWidth;
+            if (Wrap && containerWidth > 0d && current.Items.Count > 0 && nextWidth > containerWidth)
+            {
+                lines.Add(current);
+                current = new RowLine();
+                nextWidth = itemWidth;
+            }
+
+            current.Items.Add(new RowItem(child, offsetWidth, width));
+            current.Width = nextWidth;
+            current.Height = Math.Max(current.Height, child.DesiredSize.Height);
+        }
+
+        if (current.Items.Count > 0)
+        {
+            lines.Add(current);
+        }
+
+        return lines;
+    }
+
+    private double GetLineStart(double availableExtra)
+    {
+        return Justify switch
+        {
+            HorizontalAlignment.Center => availableExtra / 2d,
+            HorizontalAlignment.Right => availableExtra,
+            _ => 0d,
+        };
+    }
+
+    private double GetChildTop(double lineHeight, double childHeight)
+    {
+        var extra = Math.Max(0d, lineHeight - childHeight);
+        return Align switch
+        {
+            VerticalAlignment.Center => extra / 2d,
+            VerticalAlignment.Bottom => extra,
+            _ => 0d,
+        };
+    }
+
+    private static double GetMaxLineWidth(IReadOnlyList<RowLine> lines)
+    {
+        var maxWidth = 0d;
+        foreach (var line in lines)
+        {
+            maxWidth = Math.Max(maxWidth, line.Width);
+        }
+
+        return maxWidth;
+    }
+
     private int GetEffectiveSpan(Col col, double containerWidth)
     {
-        // Responsive breakpoints
+        if (containerWidth >= 1600 && col.XxlSpan > 0) return col.XxlSpan;
+        if (containerWidth >= 1200 && col.XlSpan > 0) return col.XlSpan;
         if (containerWidth < 576 && col.XsSpan > 0) return col.XsSpan;
         if (containerWidth < 768 && col.SmSpan > 0) return col.SmSpan;
         if (containerWidth < 992 && col.MdSpan > 0) return col.MdSpan;
         if (containerWidth < 1200 && col.LgSpan > 0) return col.LgSpan;
-        if (containerWidth >= 1200 && col.XlSpan > 0) return col.XlSpan;
 
         return col.Span;
     }
 
     private int GetEffectiveOffset(Col col, double containerWidth)
     {
-        // Responsive breakpoints
+        if (containerWidth >= 1600 && col.XxlOffset > 0) return col.XxlOffset;
+        if (containerWidth >= 1200 && col.XlOffset > 0) return col.XlOffset;
         if (containerWidth < 576 && col.XsOffset > 0) return col.XsOffset;
         if (containerWidth < 768 && col.SmOffset > 0) return col.SmOffset;
         if (containerWidth < 992 && col.MdOffset > 0) return col.MdOffset;
         if (containerWidth < 1200 && col.LgOffset > 0) return col.LgOffset;
-        if (containerWidth >= 1200 && col.XlOffset > 0) return col.XlOffset;
 
         return col.Offset;
     }
+
+    private static object CoerceNonNegative(DependencyObject dependencyObject, object baseValue)
+    {
+        return baseValue is double value && value > 0d ? value : 0d;
+    }
+
+    private sealed class RowLine
+    {
+        public List<RowItem> Items { get; } = [];
+
+        public double Width { get; set; }
+
+        public double Height { get; set; }
+    }
+
+    private sealed record RowItem(UIElement Child, double OffsetWidth, double Width);
 }
 
 /// <summary>
@@ -225,7 +262,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty SpanProperty =
         DependencyProperty.Register(nameof(Span), typeof(int), typeof(Col),
-            new PropertyMetadata(24));
+            new FrameworkPropertyMetadata(24, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceSpan));
 
     /// <summary>
     /// Gets or sets the number of columns to offset.
@@ -241,7 +278,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty OffsetProperty =
         DependencyProperty.Register(nameof(Offset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
 
     /// <summary>
     /// Gets or sets the span for extra small screens (&lt;576px).
@@ -257,7 +294,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty XsSpanProperty =
         DependencyProperty.Register(nameof(XsSpan), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOptionalSpan));
 
     /// <summary>
     /// Gets or sets the offset for extra small screens (&lt;576px).
@@ -273,7 +310,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty XsOffsetProperty =
         DependencyProperty.Register(nameof(XsOffset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
 
     /// <summary>
     /// Gets or sets the span for small screens (≥576px).
@@ -289,7 +326,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty SmSpanProperty =
         DependencyProperty.Register(nameof(SmSpan), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOptionalSpan));
 
     /// <summary>
     /// Gets or sets the offset for small screens (≥576px).
@@ -305,7 +342,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty SmOffsetProperty =
         DependencyProperty.Register(nameof(SmOffset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
 
     /// <summary>
     /// Gets or sets the span for medium screens (≥768px).
@@ -321,7 +358,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty MdSpanProperty =
         DependencyProperty.Register(nameof(MdSpan), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOptionalSpan));
 
     /// <summary>
     /// Gets or sets the offset for medium screens (≥768px).
@@ -337,7 +374,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty MdOffsetProperty =
         DependencyProperty.Register(nameof(MdOffset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
 
     /// <summary>
     /// Gets or sets the span for large screens (≥992px).
@@ -353,7 +390,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty LgSpanProperty =
         DependencyProperty.Register(nameof(LgSpan), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOptionalSpan));
 
     /// <summary>
     /// Gets or sets the offset for large screens (≥992px).
@@ -369,7 +406,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty LgOffsetProperty =
         DependencyProperty.Register(nameof(LgOffset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
 
     /// <summary>
     /// Gets or sets the span for extra large screens (≥1200px).
@@ -385,7 +422,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty XlSpanProperty =
         DependencyProperty.Register(nameof(XlSpan), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOptionalSpan));
 
     /// <summary>
     /// Gets or sets the offset for extra large screens (≥1200px).
@@ -401,7 +438,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty XlOffsetProperty =
         DependencyProperty.Register(nameof(XlOffset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
 
     /// <summary>
     /// Gets or sets the span for extra extra large screens (≥1600px).
@@ -417,7 +454,7 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty XxlSpanProperty =
         DependencyProperty.Register(nameof(XxlSpan), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOptionalSpan));
 
     /// <summary>
     /// Gets or sets the offset for extra extra large screens (≥1600px).
@@ -433,5 +470,20 @@ public class Col : ContentControl
     /// </summary>
     public static readonly DependencyProperty XxlOffsetProperty =
         DependencyProperty.Register(nameof(XxlOffset), typeof(int), typeof(Col),
-            new PropertyMetadata(0));
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure, null, CoerceOffset));
+
+    private static object CoerceSpan(DependencyObject dependencyObject, object baseValue)
+    {
+        return baseValue is int value ? Math.Clamp(value, 1, 24) : 24;
+    }
+
+    private static object CoerceOptionalSpan(DependencyObject dependencyObject, object baseValue)
+    {
+        return baseValue is int value ? Math.Clamp(value, 0, 24) : 0;
+    }
+
+    private static object CoerceOffset(DependencyObject dependencyObject, object baseValue)
+    {
+        return baseValue is int value ? Math.Clamp(value, 0, 24) : 0;
+    }
 }

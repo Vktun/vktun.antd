@@ -22,7 +22,7 @@ public class Flex : Panel
     /// </summary>
     public static readonly DependencyProperty GapProperty =
         DependencyProperty.Register(nameof(Gap), typeof(double), typeof(Flex),
-            new FrameworkPropertyMetadata(12d, FrameworkPropertyMetadataOptions.AffectsMeasure));
+            new FrameworkPropertyMetadata(12d, FrameworkPropertyMetadataOptions.AffectsMeasure, null, CoerceNonNegative));
 
     /// <summary>
     /// Identifies the <see cref="Wrap"/> dependency property.
@@ -216,6 +216,11 @@ public class Flex : Panel
         return Orientation == Orientation.Horizontal
             ? new Size(maxFlow, totalCross)
             : new Size(totalCross, maxFlow);
+    }
+
+    private static object CoerceNonNegative(DependencyObject dependencyObject, object baseValue)
+    {
+        return baseValue is double value && value > 0d ? value : 0d;
     }
 
     private double GetFlowStartOffset(double extraFlow)

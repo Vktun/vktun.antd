@@ -508,6 +508,164 @@ public class AntdThemeTests
     }
 
     [TestMethod]
+    public void Space_ShouldClearSpacing_WhenGapSetToZero()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var first = new Button();
+            var second = new Button();
+            var space = new Space
+            {
+                Orientation = Orientation.Horizontal,
+                Gap = 12,
+                Children =
+                {
+                    first,
+                    second,
+                },
+            };
+
+            first.Margin.Right.Should().Be(12);
+            second.Margin.Should().Be(new Thickness(0));
+
+            space.Gap = 0;
+
+            first.Margin.Should().Be(new Thickness(0));
+            second.Margin.Should().Be(new Thickness(0));
+        });
+    }
+
+    [TestMethod]
+    public void Flex_ShouldCoerceNegativeGapToZero()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var flex = new Flex
+            {
+                Gap = -8,
+            };
+
+            flex.Gap.Should().Be(0);
+        });
+    }
+
+    [TestMethod]
+    public void Row_ShouldCoerceGutterSpanAndOffset()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var row = new Row
+            {
+                Gutter = -16,
+            };
+            var col = new Col
+            {
+                Span = 40,
+                Offset = -2,
+                XsSpan = -1,
+                MdSpan = 32,
+                XxlOffset = 40,
+            };
+
+            row.Gutter.Should().Be(0);
+            col.Span.Should().Be(24);
+            col.Offset.Should().Be(0);
+            col.XsSpan.Should().Be(0);
+            col.MdSpan.Should().Be(24);
+            col.XxlOffset.Should().Be(24);
+        });
+    }
+
+    [TestMethod]
+    public void Row_ShouldApplyJustifyAndAlign()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var first = new Col
+            {
+                Span = 6,
+                Content = new Border { Height = 40 },
+            };
+            var second = new Col
+            {
+                Span = 6,
+                Content = new Border { Height = 20 },
+            };
+            var row = new Row
+            {
+                Width = 240,
+                Justify = HorizontalAlignment.Center,
+                Align = VerticalAlignment.Bottom,
+                Children =
+                {
+                    first,
+                    second,
+                },
+            };
+            var window = CreateWindow(row, width: 320, height: 160);
+
+            try
+            {
+                window.Show();
+                row.UpdateLayout();
+                WpfTestHost.Pump();
+
+                var firstPosition = first.TranslatePoint(new Point(0, 0), row);
+                var secondPosition = second.TranslatePoint(new Point(0, 0), row);
+
+                firstPosition.X.Should().BeApproximately(60, 0.5);
+                firstPosition.Y.Should().BeApproximately(0, 0.5);
+                secondPosition.X.Should().BeApproximately(120, 0.5);
+                secondPosition.Y.Should().BeApproximately(20, 0.5);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [TestMethod]
+    public void Row_ShouldApplyResponsiveSpanAndOffsetWithinBounds()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var col = new Col
+            {
+                Span = 24,
+                XxlSpan = 6,
+                XxlOffset = 6,
+                Content = new Border { Height = 20 },
+            };
+            var row = new Row
+            {
+                Width = 1680,
+                Children =
+                {
+                    col,
+                },
+            };
+            var window = CreateWindow(row, width: 1700, height: 120);
+
+            try
+            {
+                window.Show();
+                row.UpdateLayout();
+                WpfTestHost.Pump();
+
+                var position = col.TranslatePoint(new Point(0, 0), row);
+
+                col.ActualWidth.Should().BeApproximately(420, 0.5);
+                position.X.Should().BeApproximately(420, 0.5);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [TestMethod]
     public void Pagination_ShouldClampCurrentPageToPageCount()
     {
         WpfTestHost.Run(() =>

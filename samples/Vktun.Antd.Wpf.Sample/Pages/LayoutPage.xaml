@@ -34,10 +34,12 @@
             </controls:ComponentDemo>
 
             <controls:ComponentDemo Title="Grid (Row / Col)"
-                                    Description="保留 24 栅格布局语义，方便把 Ant Design 的布局经验迁移到 WPF。"
+                                    Description="保留 24 栅格布局语义，支持 Gutter、Justify、Align 和响应式 Span/Offset。"
                                     XamlCode="{x:Static snippets:LayoutSnippets.Grid}">
                 <controls:ComponentDemo.PreviewContent>
-                    <antd:Row Gutter="16">
+                    <antd:Row Gutter="16"
+                              Justify="Center"
+                              Align="Center">
                         <antd:Col Span="8">
                             <Border Height="72"
                                     Padding="16"
@@ -67,7 +69,7 @@
             </controls:ComponentDemo>
 
             <controls:ComponentDemo Title="Space"
-                                    Description="把 sample 和库模板中的统一间距从 SpaceAssist 迁到 antd:Space。"
+                                    Description="用于简单线性间距；需要换行、主轴分布或交叉轴对齐时使用 Flex。"
                                     XamlCode="{x:Static snippets:LayoutSnippets.Space}">
                 <controls:ComponentDemo.PreviewContent>
                     <StackPanel>
@@ -86,7 +88,7 @@
             </controls:ComponentDemo>
 
             <controls:ComponentDemo Title="Flex"
-                                    Description="新增 Flex 容器，优先覆盖容器级的排列、对齐、换行和间距。"
+                                    Description="用于容器级排列、对齐、换行和间距，适合替代复杂的嵌套 StackPanel。"
                                     XamlCode="{x:Static snippets:LayoutSnippets.Flex}">
                 <controls:ComponentDemo.PreviewContent>
                     <antd:Flex Gap="12"
